@@ -1,6 +1,7 @@
-# A simple SpringBoot app deploy to TAS
+# A simple SpringBoot app with MySQL dependency deploy to TAS 
 
 ### Bumping Java to version 11
+### Connection application to MySQL service on TAS
 
 ###Prequisites
 
@@ -13,10 +14,43 @@
 ###Update `pom.xml` to use Java 11
 
 ```xml
-     <properties>
-        <java.version>11</java.version>
-     </properties>
+<properties>
+    <java.version>11</java.version>
+</properties>
 ```
+
+###Update `pom.xml` to include JPA, DB2 (for local), MySQL dependencies
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+<dependency>
+    <groupId>com.h2database</groupId>
+    <artifactId>h2</artifactId>
+    <scope>runtime</scope>
+</dependency>
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <scope>runtime</scope>
+</dependency>
+```
+
+###Code changes
+
+Refer CourseController.java which uses CourseRepository.java (extends JpaRepository) to persist data in MySQL
+
+###Property changes
+
+Included `application-cloud.properties`. `cloud` profile is auto-injected when apps are deployed in Cloud Foundry.
+
+```properties
+spring.jpa.hibernate.ddl-auto=update
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+```
+
 ###Build
 
 ```shell
@@ -32,10 +66,8 @@ Launch http://localhost:8080/courses
 ###Deploy app to TAS
 
 ```shell
-cf push course-service -p ./target/course-service-0.0.1-SNAPSHOT.jar
-
-# or
-cf push course-service -p ./target/course-service-0.0.1-SNAPSHOT.jar -b java_buildpack_offline
+cf push course-service -p ./target/course-service-0.0.1-SNAPSHOT.jar \
+  -b java_buildpack_offline -m 2G 
 
 # Set environment variable
 #cf set-env APP_NAME ENV_VAR_NAME ENV_VAR_VALUE
@@ -48,10 +80,38 @@ cf restage course-service
 cf app course-service
 ```
 
+###Create and bind MySQL service
+
+```shell
+cf create-service p.mysql db-small course-db
+watch create-service course-db
+
+name:             course-db
+service:          p.mysql
+tags:             
+plan:             db-small
+description:      Dedicated instances of MySQL
+dashboard:        
+service broker:   dedicated-mysql-broker
+
+Showing status of last operation from service course-db...
+
+status:    create succeeded
+message:   Instance provisioning completed
+
+
+# wait till the service status is "create succeeded"
+cf bind-service course-service course-db
+cf restart course-service
+
+````
+
 ###Test application deployed on TAS
 
 ```shell
-curl -k https://course-service.<app-domain>/courses
+http --verify=no https://course-service.app-domain/courses
+
+http --verify no https://course-service.app-domain/courses name="Spring Boot" duration=60
 ```
 
 ### Check environment variables set to an app

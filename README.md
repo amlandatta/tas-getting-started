@@ -1,4 +1,4 @@
-# A simple static app
+# Deploy static and SpringBoot apps to Tanzu Application Service (TAS, Cloud Foundry)
 
 ### Follow the branch
 
@@ -7,3 +7,5 @@
 02: Deploy a simple SpringBoot application to Tanzu Application Service (TAS)
 
 02.1: Use environment variables and bump project to Java 11
+
+03: Connection application to MySQL service on TAS 
