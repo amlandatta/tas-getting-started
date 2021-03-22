@@ -86,8 +86,26 @@ public class CourseController {
         } else {
             return ResponseEntity.notFound().build();
         }
-
     }
+
+
+    @Value("${course-service.uri}")
+    private String uri;
+
+    @Value("${course-service.dbconnection}")
+    private String dbconnection;
+
+
+    @GetMapping("/custom-config")
+    public String getCustomConfig(){
+        return this.uri;
+    }
+
+    @GetMapping("/secret-config")
+    public String getSecretConfig(){
+        return this.dbconnection;
+    }
+
 
 }
 

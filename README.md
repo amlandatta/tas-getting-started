@@ -9,3 +9,5 @@
 02.1: Use environment variables and bump project to Java 11
 
 03: Connection application to MySQL service on TAS 
+
+04: Working with Custom User Provided Service (CUPS) and securing external credentials using Credhub on TAS

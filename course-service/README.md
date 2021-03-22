@@ -1,7 +1,9 @@
 # A simple SpringBoot app with MySQL dependency deploy to TAS 
 
-### Bumping Java to version 11
-### Connection application to MySQL service on TAS
+
+* #### Bumping Java to version 11
+* #### Connection application to MySQL service on TAS
+* #### Working with Custom User Provided Service (CUPS) and securing external credentials using Credhub on TAS
 
 ###Prequisites
 
@@ -38,7 +40,7 @@
 </dependency>
 ```
 
-###Code changes
+###Code changes to use JPA
 
 Refer CourseController.java which uses CourseRepository.java (extends JpaRepository) to persist data in MySQL
 
@@ -51,6 +53,39 @@ spring.jpa.hibernate.ddl-auto=update
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 ```
 
+###Code changes to use custom properties bound by TAS
+
+Refer CourseController.java 
+
+```java
+@Value("${course-service.uri}")
+private String uri;
+
+@Value("${course-service.dbconnection}")
+private String dbconnection;
+
+
+@GetMapping("/custom-config")
+public String getCustomConfig(){
+    return this.uri;
+}
+
+@GetMapping("/secret-config")
+public String getSecretConfig(){
+    return this.dbconnection;
+}
+```
+
+###Property changes
+
+Updated `application.properties` to set default for local environment.
+
+```properties
+course-service.uri=${vcap.services.test-endpoint.credentials.uri:http://httpbin.org}
+course-service.dbconnection=${vcap.services.external-db-service.credentials.dbconnection:secret}
+```
+
+
 ###Build
 
 ```shell
@@ -62,6 +97,10 @@ mvn spring-boot:run
 ###Test app locally
 
 Launch http://localhost:8080/courses
+
+http://localhost:8080/courses/custom-config
+
+http://localhost:8080/courses/secret-config
 
 ###Deploy app to TAS
 
@@ -78,6 +117,7 @@ cf restage course-service
 
 # View app details
 cf app course-service
+
 ```
 
 ###Create and bind MySQL service
@@ -106,6 +146,21 @@ cf restart course-service
 
 ````
 
+###Create and bind custom service
+
+```shell
+#create custom user provided service (cups)
+cf create-user-provided-service test-endpoint -p "uri"                                        uri> http://httpbin.org/get
+
+cf bind-service course-service test-endpoint
+cf restart course-service
+
+#create credhub service
+cf cs credhub default external-db-service -c '{"dbconnection":"oracle://oracle:oracle@course-db:1521/course"}'
+cf bs course-service external-db-service
+cf restart course-service
+```
+
 ###Test application deployed on TAS
 
 ```shell
@@ -120,15 +175,72 @@ http --verify no https://course-service.app-domain/courses name="Spring Boot" du
 cf env course-service
 Getting env variables for app course-service in org ... / space ... as ......
 System-Provided:
-VCAP_SERVICES: {}
+VCAP_SERVICES: {
+ "credhub": [
+  {
+   "binding_name": null,
+   "credentials": {
+    "credhub-ref": "/credhub-service-broker/credhub/7a11a5ab-6cbd-400f-bb44-fe05c41bfdf3/credentials"
+   },
+   "instance_name": "external-db-service",
+   "label": "credhub",
+   "name": "external-db-service",
+   "plan": "default",
+   "provider": null,
+   "syslog_drain_url": null,
+   "tags": [
+    "credhub"
+   ],
+   "volume_mounts": []
+  }
+ ],
+ "p.mysql": [
+  {
+   "binding_name": null,
+   "credentials": {
+    "hostname": "5a809347-7e2e-4669-9a98-ff0e00829108.mysql.service.internal",
+    "jdbcUrl": "jdbc:mysql://5a809347-7e2e-4669-9a98-ff0e00829108.mysql.service.internal:3306/service_instance_db?user=e3ea246280f64d8ca499b0fb35c270cb\u0026password=3hnfy1c1jdqgdcre\u0026useSSL=false",
+    "name": "service_instance_db",
+    "password": "3hnfy1c1jdqgdcre",
+    "port": 3306,
+    "uri": "mysql://e3ea246280f64d8ca499b0fb35c270cb:3hnfy1c1jdqgdcre@5a809347-7e2e-4669-9a98-ff0e00829108.mysql.service.internal:3306/service_instance_db?reconnect=true",
+    "username": "e3ea246280f64d8ca499b0fb35c270cb"
+   },
+   "instance_name": "course-db",
+   "label": "p.mysql",
+   "name": "course-db",
+   "plan": "db-small",
+   "provider": null,
+   "syslog_drain_url": null,
+   "tags": [
+    "mysql"
+   ],
+   "volume_mounts": []
+  }
+ ],
+ "user-provided": [
+  {
+   "binding_name": null,
+   "credentials": {
+    "uri": "http://httpbin.org/get"
+   },
+   "instance_name": "test-endpoint",
+   "label": "user-provided",
+   "name": "test-endpoint",
+   "syslog_drain_url": "",
+   "tags": [],
+   "volume_mounts": []
+  }
+ ]
+}
 
 VCAP_APPLICATION: {
  "application_id": "f1d3aedd-3d73-487d-8e66-16ea4f0dc958",
  "application_name": "course-service",
  "application_uris": [
-  "course-service...."
+  "course-service..app-domain"
  ],
- "cf_api": "https://api...",
+ "cf_api": "https://api.domain",
  "limits": {
   "fds": 16384
  },
@@ -138,7 +250,7 @@ VCAP_APPLICATION: {
  "space_id": "ea388138-afa7-4889-b4e8-5a3676afd545",
  "space_name": "...",
  "uris": [
-  "course-service..."
+  "course-service.app-domain"
  ],
  "users": null
 }
