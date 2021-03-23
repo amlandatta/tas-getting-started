@@ -5,7 +5,7 @@
 * #### Connection application to MySQL service on TAS
 * #### Working with Custom User Provided Service (CUPS) and securing external credentials using Credhub on TAS
 
-###Prequisites
+### Prequisites
 
 * Java 11
 * Maven
@@ -13,7 +13,7 @@
 * TAS 2.10 (but should work with earlier versions)
 
 
-###Update `pom.xml` to use Java 11
+### Update `pom.xml` to use Java 11
 
 ```xml
 <properties>
@@ -21,7 +21,7 @@
 </properties>
 ```
 
-###Update `pom.xml` to include JPA, DB2 (for local), MySQL dependencies
+### Update `pom.xml` to include JPA, DB2 (for local), MySQL dependencies
 
 ```xml
 <dependency>
@@ -40,11 +40,11 @@
 </dependency>
 ```
 
-###Code changes to use JPA
+### Code changes to use JPA
 
 Refer CourseController.java which uses CourseRepository.java (extends JpaRepository) to persist data in MySQL
 
-###Property changes
+### Property changes
 
 Included `application-cloud.properties`. `cloud` profile is auto-injected when apps are deployed in Cloud Foundry.
 
@@ -53,7 +53,7 @@ spring.jpa.hibernate.ddl-auto=update
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 ```
 
-###Code changes to use custom properties bound by TAS
+### Code changes to use custom properties bound by TAS
 
 Refer CourseController.java 
 
@@ -76,7 +76,7 @@ public String getSecretConfig(){
 }
 ```
 
-###Property changes
+### Property changes
 
 Updated `application.properties` to set default for local environment.
 
@@ -86,7 +86,7 @@ course-service.dbconnection=${vcap.services.external-db-service.credentials.dbco
 ```
 
 
-###Build
+### Build
 
 ```shell
 cd ~/course-service
@@ -94,7 +94,7 @@ mvn clean package -DskipTests
 mvn spring-boot:run
 ```
 
-###Test app locally
+### Test app locally
 
 Launch http://localhost:8080/courses
 
@@ -102,7 +102,7 @@ http://localhost:8080/courses/custom-config
 
 http://localhost:8080/courses/secret-config
 
-###Deploy app to TAS
+### Deploy app to TAS
 
 ```shell
 cf push course-service -p ./target/course-service-0.0.1-SNAPSHOT.jar \
@@ -120,7 +120,7 @@ cf app course-service
 
 ```
 
-###Create and bind MySQL service
+### Create and bind MySQL service
 
 ```shell
 cf create-service p.mysql db-small course-db
@@ -146,7 +146,7 @@ cf restart course-service
 
 ````
 
-###Create and bind custom service
+### Create and bind custom service
 
 ```shell
 #create custom user provided service (cups)
@@ -161,7 +161,7 @@ cf bs course-service external-db-service
 cf restart course-service
 ```
 
-###Test application deployed on TAS
+### Test application deployed on TAS
 
 ```shell
 http --verify=no https://course-service.app-domain/courses
@@ -261,4 +261,33 @@ JBP_CONFIG_OPEN_JDK_JRE: { jre: { version: 11.+}}
 No running env variables have been set
 
 No staging env variables have been set
+```
+
+
+### Deploy using manifest
+
+Refer `manifest.yml` and `vars-cloud.yml`
+
+```
+cf push --vars-file=vars-cloud.yml
+```
+
+### Scale application
+
+```
+cf scale course-service -i 2
+```
+### Rolling deployment
+
+```
+cf push --vars-file=vars-cloud.yml --var app-version="`date`" --strategy rolling
+```
+
+Note: replace `date` by application version
+
+Simultaneously hit the application to check if application is always available
+
+```shell
+while true; do http http://course-service.cfapps.haas-490.pez.vmware.com/health/version -b --timeout 5 | tr -d '\n'; echo
+"  "  `date`; sleep 1s; done
 ```

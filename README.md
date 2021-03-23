@@ -11,3 +11,5 @@
 03: Connection application to MySQL service on TAS 
 
 04: Working with Custom User Provided Service (CUPS) and securing external credentials using Credhub on TAS
+
+05: Deploy app using manifest

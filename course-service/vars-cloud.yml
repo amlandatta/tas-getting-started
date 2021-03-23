@@ -1,0 +1,11 @@
+app_name: course-service
+app_path: ./target/course-service-0.0.1-SNAPSHOT.jar
+instances: 1
+memory: 2G
+disk_quota: 1G
+buildpack-java: java_buildpack_offline
+domain: your-app-domain
+startup_timeout: 60
+response_time: 5
+active-profiles: cloud
+db-service: course-db
